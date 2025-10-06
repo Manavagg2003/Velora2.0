@@ -1,7 +1,46 @@
 import { supabase } from '@/lib/supabase';
 import { RecipeData, RecipeCache, SavedRecipe } from '@/types/database';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const OFFLINE_RECIPES_KEY = '@velora_offline_recipes';
+const OFFLINE_FAVORITES_KEY = '@velora_offline_favorites';
 
 export class RecipeService {
+  private async getOfflineRecipes(): Promise<RecipeCache[]> {
+    try {
+      const data = await AsyncStorage.getItem(OFFLINE_RECIPES_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error reading offline recipes:', error);
+      return [];
+    }
+  }
+
+  private async saveOfflineRecipes(recipes: RecipeCache[]): Promise<void> {
+    try {
+      await AsyncStorage.setItem(OFFLINE_RECIPES_KEY, JSON.stringify(recipes));
+    } catch (error) {
+      console.error('Error saving offline recipes:', error);
+    }
+  }
+
+  private async getOfflineFavorites(): Promise<SavedRecipe[]> {
+    try {
+      const data = await AsyncStorage.getItem(OFFLINE_FAVORITES_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error reading offline favorites:', error);
+      return [];
+    }
+  }
+
+  private async saveOfflineFavorites(favorites: SavedRecipe[]): Promise<void> {
+    try {
+      await AsyncStorage.setItem(OFFLINE_FAVORITES_KEY, JSON.stringify(favorites));
+    } catch (error) {
+      console.error('Error saving offline favorites:', error);
+    }
+  }
   async saveRecipe(userId: string, recipeData: RecipeData, searchQuery?: string, isGenerated: boolean = false): Promise<string | null> {
     try {
       const { data, error } = await supabase
@@ -36,10 +75,15 @@ export class RecipeService {
         .limit(limit);
 
       if (error) throw error;
+
+      if (data && data.length > 0) {
+        await this.saveOfflineRecipes(data);
+      }
+
       return data || [];
     } catch (error) {
-      console.error('Error fetching recipes:', error);
-      return [];
+      console.error('Error fetching recipes, using offline cache:', error);
+      return await this.getOfflineRecipes();
     }
   }
 
@@ -124,10 +168,15 @@ export class RecipeService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      if (data && data.length > 0) {
+        await this.saveOfflineFavorites(data);
+      }
+
       return data || [];
     } catch (error) {
-      console.error('Error fetching favorites:', error);
-      return [];
+      console.error('Error fetching favorites, using offline cache:', error);
+      return await this.getOfflineFavorites();
     }
   }
 
