@@ -12,6 +12,12 @@
   4. chat_conversations - AI chat history
   5. coin_transactions - Coin usage tracking
   6. user_preferences - User settings
+
+  Authentication:
+  - Uses email/password authentication
+  - Email confirmation is NOT required (users can sign in immediately)
+  - Configure in Supabase Dashboard > Authentication > Settings:
+    * Disable "Enable email confirmations"
 */
 
 -- Create profiles table

@@ -6,7 +6,8 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  signInWithOTP: (email: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -35,11 +36,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithOTP = async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
       email,
+      password,
+    });
+    return { error };
+  };
+
+  const signUp = async (email: string, password: string, fullName?: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
       options: {
-        emailRedirectTo: 'velora://auth/callback',
+        data: {
+          full_name: fullName,
+        },
       },
     });
     return { error };
@@ -50,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signInWithOTP, signOut }}>
+    <AuthContext.Provider value={{ session, user, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );

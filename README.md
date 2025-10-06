@@ -6,7 +6,7 @@ A comprehensive React Native/Expo application that combines intelligent recipe d
 
 ### Core Functionality
 
-- **OTP Authentication**: Passwordless login via email magic links using Supabase Auth
+- **Email/Password Authentication**: Secure sign up and sign in using Supabase Auth
 - **AI Chat Assistant**: Powered by Google Gemini AI for cooking questions, techniques, and advice (1 coin per message)
 - **Recipe Discovery**: Advanced search by ingredients, cuisine, dietary restrictions, and mood
 - **AI Recipe Generation**: Custom recipe creation based on available ingredients (3 coins per generation)
@@ -158,7 +158,8 @@ npm run build:web
 ## Security Features
 
 - Row Level Security (RLS) on all database tables
-- Secure authentication with magic links
+- Secure email/password authentication with Supabase
+- Password validation (minimum 6 characters)
 - Automatic session refresh
 - Protected API routes
 - No sensitive data in client code
@@ -166,10 +167,10 @@ npm run build:web
 ## Key User Flows
 
 ### Authentication
-1. User enters email
-2. Receives magic link via email
-3. Clicks link to authenticate
-4. Profile automatically created with 10 free coins
+1. New users click "Sign Up" and enter name, email, and password
+2. Existing users sign in with email and password
+3. Profile automatically created with 10 free coins on sign up
+4. Secure session established with automatic refresh
 
 ### Recipe Generation
 1. User enters ingredients or preferences

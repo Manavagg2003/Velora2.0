@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { ChefHat } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -9,32 +9,77 @@ import { Button } from '@/components/Button';
 
 export default function LoginScreen() {
   const { theme } = useTheme();
-  const { signInWithOTP } = useAuth();
+  const { signIn, signUp } = useAuth();
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
 
-  const handleLogin = async () => {
+  const validateForm = () => {
     if (!email.trim()) {
       Alert.alert('Error', 'Please enter your email address');
-      return;
+      return false;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert('Error', 'Please enter a valid email address');
-      return;
+      return false;
     }
+
+    if (!password) {
+      Alert.alert('Error', 'Please enter a password');
+      return false;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
+      return false;
+    }
+
+    if (isSignUp) {
+      if (!fullName.trim()) {
+        Alert.alert('Error', 'Please enter your full name');
+        return false;
+      }
+
+      if (password !== confirmPassword) {
+        Alert.alert('Error', 'Passwords do not match');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
 
     setLoading(true);
 
     try {
-      const { error } = await signInWithOTP(email);
-
-      if (error) {
-        Alert.alert('Error', error.message || 'Failed to send login link');
+      if (isSignUp) {
+        const { error } = await signUp(email, password, fullName);
+        if (error) {
+          Alert.alert('Sign Up Error', error.message || 'Failed to create account');
+        } else {
+          Alert.alert(
+            'Success',
+            'Account created successfully! You can now sign in.',
+            [{ text: 'OK', onPress: () => setIsSignUp(false) }]
+          );
+          setEmail('');
+          setPassword('');
+          setConfirmPassword('');
+          setFullName('');
+        }
       } else {
-        setEmailSent(true);
+        const { error } = await signIn(email, password);
+        if (error) {
+          Alert.alert('Sign In Error', error.message || 'Invalid email or password');
+        }
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred');
@@ -43,54 +88,46 @@ export default function LoginScreen() {
     }
   };
 
-  if (emailSent) {
-    return (
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <View style={styles.successContainer}>
-          <View style={[styles.iconContainer, { backgroundColor: theme.success + '20' }]}>
-            <ChefHat size={48} color={theme.success} />
-          </View>
-          <Text style={[styles.successTitle, { color: theme.text }]}>
-            Check Your Email
-          </Text>
-          <Text style={[styles.successText, { color: theme.textSecondary }]}>
-            We've sent a magic link to
-          </Text>
-          <Text style={[styles.email, { color: theme.primary }]}>
-            {email}
-          </Text>
-          <Text style={[styles.successText, { color: theme.textSecondary }]}>
-            Click the link in the email to sign in to your Velora account.
-          </Text>
-          <Button
-            title="Back to Login"
-            onPress={() => setEmailSent(false)}
-            variant="outline"
-            style={styles.backButton}
-          />
-        </View>
-      </View>
-    );
-  }
+  const toggleMode = () => {
+    setIsSignUp(!isSignUp);
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setFullName('');
+  };
 
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
     >
       <View style={styles.header}>
         <View style={[styles.logoContainer, { backgroundColor: theme.primary }]}>
           <ChefHat size={40} color="#FFFFFF" />
         </View>
         <Text style={[styles.title, { color: theme.text }]}>
-          Welcome to Velora
+          {isSignUp ? 'Create Account' : 'Welcome Back'}
         </Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-          Your AI-powered cooking companion
+          {isSignUp
+            ? 'Join Velora and start cooking with AI'
+            : 'Sign in to your Velora account'}
         </Text>
       </View>
 
       <View style={styles.form}>
+        {isSignUp && (
+          <Input
+            label="Full Name"
+            placeholder="Enter your full name"
+            value={fullName}
+            onChangeText={setFullName}
+            autoCapitalize="words"
+            autoCorrect={false}
+          />
+        )}
+
         <Input
           label="Email Address"
           placeholder="Enter your email"
@@ -101,47 +138,74 @@ export default function LoginScreen() {
           autoCorrect={false}
         />
 
-        <Button
-          title="Send Magic Link"
-          onPress={handleLogin}
-          loading={loading}
-          style={styles.loginButton}
+        <Input
+          label="Password"
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          autoCapitalize="none"
         />
 
-        <Text style={[styles.infoText, { color: theme.textSecondary }]}>
-          We'll send you a secure login link via email. No password required!
-        </Text>
+        {isSignUp && (
+          <Input
+            label="Confirm Password"
+            placeholder="Re-enter your password"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+            autoCapitalize="none"
+          />
+        )}
+
+        <Button
+          title={isSignUp ? 'Sign Up' : 'Sign In'}
+          onPress={handleSubmit}
+          loading={loading}
+          style={styles.submitButton}
+        />
+
+        <TouchableOpacity onPress={toggleMode} style={styles.toggleContainer}>
+          <Text style={[styles.toggleText, { color: theme.textSecondary }]}>
+            {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+          </Text>
+          <Text style={[styles.toggleLink, { color: theme.primary }]}>
+            {isSignUp ? 'Sign In' : 'Sign Up'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.features}>
-        <Text style={[styles.featuresTitle, { color: theme.text }]}>
-          What you'll get:
-        </Text>
-        <View style={styles.featureItem}>
-          <Text style={[styles.featureBullet, { color: theme.primary }]}>•</Text>
-          <Text style={[styles.featureText, { color: theme.textSecondary }]}>
-            10 free VeloraCoins to start
+      {!isSignUp && (
+        <View style={styles.features}>
+          <Text style={[styles.featuresTitle, { color: theme.text }]}>
+            What you'll get:
           </Text>
+          <View style={styles.featureItem}>
+            <Text style={[styles.featureBullet, { color: theme.primary }]}>•</Text>
+            <Text style={[styles.featureText, { color: theme.textSecondary }]}>
+              10 free VeloraCoins to start
+            </Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Text style={[styles.featureBullet, { color: theme.primary }]}>•</Text>
+            <Text style={[styles.featureText, { color: theme.textSecondary }]}>
+              AI-powered recipe generation
+            </Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Text style={[styles.featureBullet, { color: theme.primary }]}>•</Text>
+            <Text style={[styles.featureText, { color: theme.textSecondary }]}>
+              Personalized cooking assistant
+            </Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Text style={[styles.featureBullet, { color: theme.primary }]}>•</Text>
+            <Text style={[styles.featureText, { color: theme.textSecondary }]}>
+              Save and organize your favorites
+            </Text>
+          </View>
         </View>
-        <View style={styles.featureItem}>
-          <Text style={[styles.featureBullet, { color: theme.primary }]}>•</Text>
-          <Text style={[styles.featureText, { color: theme.textSecondary }]}>
-            AI-powered recipe generation
-          </Text>
-        </View>
-        <View style={styles.featureItem}>
-          <Text style={[styles.featureBullet, { color: theme.primary }]}>•</Text>
-          <Text style={[styles.featureText, { color: theme.textSecondary }]}>
-            Personalized cooking assistant
-          </Text>
-        </View>
-        <View style={styles.featureItem}>
-          <Text style={[styles.featureBullet, { color: theme.primary }]}>•</Text>
-          <Text style={[styles.featureText, { color: theme.textSecondary }]}>
-            Save and organize your favorites
-          </Text>
-        </View>
-      </View>
+      )}
     </ScrollView>
   );
 }
@@ -178,14 +242,21 @@ const styles = StyleSheet.create({
   form: {
     marginBottom: 32,
   },
-  loginButton: {
+  submitButton: {
     marginTop: 8,
   },
-  infoText: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 16,
-    lineHeight: 20,
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  toggleText: {
+    fontSize: 15,
+  },
+  toggleLink: {
+    fontSize: 15,
+    fontWeight: '700',
   },
   features: {
     marginTop: 24,
@@ -208,38 +279,5 @@ const styles = StyleSheet.create({
   featureText: {
     fontSize: 15,
     flex: 1,
-  },
-  successContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  iconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  successTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  successText: {
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 8,
-  },
-  email: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  backButton: {
-    marginTop: 24,
   },
 });
