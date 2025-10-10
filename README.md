@@ -247,7 +247,7 @@ For support, email support@velora.app or create an issue in the repository.
 
 - **AI CHAT SCREEN**: Bugs in gemini api and chat submissions 
 - **Payment methods**: Bugs in payment methods in profile screen 
--**EXTRA FEATURES**: My badges, monthly leaderboard, my badges, monthly leaderboard, settings are currently  mock texts - to be made functional
+- **EXTRA FEATURES**: My badges, monthly leaderboard, my badges, monthly leaderboard, settings are currently  mock texts - to be made functional
 
 ---
 
