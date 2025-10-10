@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--access-token",
+        "sbp_7051bb6873665e6bbb19c549a8141b659d7452cd"
+      ]
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"]
+    },
+    "mobile-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@mobilenext/mobile-mcp@latest"
+      ]
+    },
+    "github": {
+      "httpUrl": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "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"
+      },
+      "timeout": 15000 
+    }
+  }
+}

@@ -1,366 +1,248 @@
 # Velora - AI-Powered Cooking Companion
 
-A comprehensive React Native/Expo application that combines intelligent recipe discovery, AI chat assistance, and a subscription-based coin system to create the ultimate cooking companion.
+Velora is a comprehensive React Native (Expo) app that serves as your AI-powered cooking companion. Built with TypeScript, Supabase, and Google Gemini AI, it provides intelligent recipe generation, personalized cooking assistance, and a subscription-based coin system.
 
-## Features
+## 🚀 Features
 
-### Core Functionality
+### Core Features
+- **AI-Powered Chat Assistant**: Get cooking advice, ingredient substitutions, and technique tips
+- **Recipe Generation**: Generate personalized recipes from available ingredients
+- **Recipe Discovery**: Browse and search through a curated collection of recipes
+- **VeloraCoins System**: Freemium model with subscription tiers
+- **Offline Caching**: Save recipes for offline access
+- **User Profiles**: Personalized preferences and dietary restrictions
+- **Payment Integration**: Razorpay integration for subscription management
 
-- **Email/Password Authentication**: Secure sign up and sign in using Supabase Auth
-- **AI Chat Assistant**: Powered by Google Gemini AI for cooking questions, techniques, and advice (1 coin per message)
-- **Recipe Discovery**: Advanced search by ingredients, cuisine, dietary restrictions, and mood
-- **AI Recipe Generation**: Custom recipe creation based on available ingredients (3 coins per generation)
-- **Subscription System**: Freemium model with four tiers (Free, Plus, Pro, Ultra)
-- **Coin Management**: Complete tracking of coin balance, usage, and transactions
+### Subscription Tiers
+- **Free**: 10 coins/month
+- **Plus**: 50 coins/month - $4.99
+- **Pro**: 150 coins/month - $9.99
+- **Ultra**: 500 coins/month - $19.99
 
-### User Experience
+### AI Capabilities
+- **Chat Messages**: 1 coin per message
+- **Recipe Generation**: 3 coins per recipe
+- **Context-Aware Responses**: Considers dietary restrictions, skill level, and preferences
+- **Rate Limiting**: 5 requests per minute per user
 
-- **Modern UI**: Clean, intuitive interface with dark/light theme support
-- **Responsive Design**: Optimized for mobile with smooth animations
-- **Real-time Updates**: Live coin balance and subscription status
-- **Secure Sessions**: Automatic token refresh and session management
+## 🛠 Tech Stack
 
-## Tech Stack
+- **Frontend**: React Native (Expo SDK 54+), TypeScript
+- **Backend**: Supabase (PostgreSQL, Auth, Edge Functions)
+- **AI**: Google Gemini Pro
+- **Payments**: Razorpay
+- **State Management**: React Context + Hooks
+- **Navigation**: Expo Router
+- **Styling**: Custom theme system with dark/light mode support
 
-### Frontend
-- React Native with Expo SDK 54+
-- Expo Router for file-based routing
-- TypeScript for type safety
-- Custom styling with theme system
-- Context API for state management
+## 📱 Screenshots
 
-### Backend & Services
-- Supabase for database and authentication
-- Google Gemini AI (gemini-2.0-flash-exp) for chat and recipe generation
-- Razorpay for payment processing
-- Row Level Security (RLS) for data protection
+*Screenshots will be added here*
 
-## Project Structure
-
-```
-velora/
-├── app/
-│   ├── (tabs)/           # Main tab navigation
-│   │   ├── index.tsx     # Home screen
-│   │   ├── chat.tsx      # AI chat interface
-│   │   ├── recipes.tsx   # Recipe discovery
-│   │   └── profile.tsx   # User profile & settings
-│   ├── auth/
-│   │   └── login.tsx     # Authentication screen
-│   ├── _layout.tsx       # Root layout with providers
-│   └── index.tsx         # Entry point
-├── components/           # Reusable UI components
-│   ├── Button.tsx
-│   ├── Card.tsx
-│   ├── Input.tsx
-│   ├── CoinBalance.tsx
-│   └── RecipeCard.tsx
-├── contexts/            # React Context providers
-│   ├── AuthContext.tsx
-│   ├── ProfileContext.tsx
-│   └── ThemeContext.tsx
-├── services/            # Business logic services
-│   ├── ai.service.ts
-│   ├── chat.service.ts
-│   ├── recipe.service.ts
-│   └── payment.service.ts
-├── lib/
-│   └── supabase.ts      # Supabase client config
-└── types/
-    └── database.ts      # TypeScript definitions
-```
-
-## Architecture Overview
-
-### Database Schema
-
-The application uses the following Supabase tables:
-
-#### profiles
-User profile with coin balance and subscription details
-
-#### recipe_cache
-Stores discovered and AI-generated recipes
-
-#### saved_recipes
-User's bookmarked/favorite recipes
-
-#### chat_conversations
-AI chat history with conversation threads
-
-#### coin_transactions
-Complete audit trail of all coin usage
-
-#### user_preferences
-Dietary restrictions, allergies, and user settings
-
-#### analytics_events
-Tracks user actions and AI usage for monitoring
-
-### Edge Functions (Server-Side)
-
-The app uses Supabase Edge Functions to keep secrets secure and handle server-side logic:
-
-#### gemini-proxy
-- **Purpose**: Securely calls Google Gemini AI API
-- **Features**:
-  - Rate limiting (5 calls/minute per user)
-  - Atomic coin deduction (1 coin for chat, 3 for recipe generation)
-  - Context-aware prompt engineering
-  - Error handling and retry logic
-  - Analytics event logging
-- **Security**: API key never exposed to client
-
-#### razorpay-verify
-- **Purpose**: Verifies Razorpay payment signatures
-- **Features**:
-  - HMAC signature verification
-  - Atomic coin granting
-  - Subscription tier updates
-  - Payment analytics tracking
-- **Security**: Razorpay secret never exposed to client
-
-### Atomic Operations
-
-The app uses PostgreSQL stored procedures for atomic coin operations:
-
-- `charge_user_coins(user_id, amount, type, description)` - Deducts coins with balance check
-- `grant_user_coins(user_id, amount, type, description)` - Adds coins with transaction record
-- `reset_monthly_coins()` - Resets coins monthly based on subscription tier
-
-## Setup Instructions
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ installed
-- Expo CLI (`npm install -g expo-cli`)
-- Supabase account with CLI installed
-- Google AI API key (Gemini)
+- Node.js 18+ and npm/yarn
+- Expo CLI (`npm install -g @expo/cli`)
+- Supabase account
+- Google AI Studio account (for Gemini API)
 - Razorpay account (for payments)
 
-### Step 1: Clone and Install
+### Installation
 
-```bash
-npm install
-```
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd velora
+   ```
 
-### Step 2: Supabase Database Setup
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-1. **Create a new Supabase project** at [supabase.com](https://supabase.com)
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Update the `.env` file with your actual values:
+   ```env
+   EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   GEMINI_API_KEY=your_gemini_api_key
+   RAZORPAY_KEY_ID=your_razorpay_key_id
+   RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+   ```
 
-2. **Run database migrations** in your Supabase SQL Editor:
-   - Open `database-schema.sql` and execute it
-   - Open `supabase/migrations/20251006043545_create_velora_schema.sql` and execute it
-   - Open `supabase/migrations/20251006060000_add_analytics_and_coin_functions.sql` and execute it
+4. **Set up Supabase database**
+   - Go to your Supabase project dashboard
+   - Navigate to SQL Editor
+   - Run the database schema from `database-schema.sql`
+   - Deploy the Edge Functions from `supabase/functions/`
 
-3. **Configure Authentication**:
-   - Go to Authentication > Settings in Supabase Dashboard
-   - **Enable Email/Password authentication**
-   - **Disable email confirmations** (or configure SMTP for production)
-   - Set password requirements (minimum 6 characters)
+5. **Start the development server**
+   ```bash
+   npm run dev
+   ```
 
-4. **Get your Supabase credentials**:
-   - Project URL: Settings > API > Project URL
-   - Anon Key: Settings > API > Project API keys > anon public
-   - Service Role Key: Settings > API > Project API keys > service_role (keep secure!)
+## 🗄 Database Schema
 
-### Step 3: Deploy Edge Functions
+The app uses the following main tables:
 
-The app uses two Supabase Edge Functions for secure server-side operations:
+- **profiles**: User profiles with coin balance and subscription info
+- **recipe_cache**: Cached AI-generated recipes
+- **saved_recipes**: User's favorite recipes
+- **chat_conversations**: AI chat history
+- **coin_transactions**: Coin usage tracking
+- **user_preferences**: User settings and preferences
+- **subscriptions**: Subscription management
+- **analytics_events**: Event tracking
 
-1. **Deploy gemini-proxy function**:
-```bash
-supabase functions deploy gemini-proxy
-```
+## 🔧 Configuration
 
-2. **Deploy razorpay-verify function**:
-```bash
-supabase functions deploy razorpay-verify
-```
+### Supabase Setup
 
-3. **Set Edge Function secrets**:
-```bash
-supabase secrets set GEMINI_API_KEY=your-gemini-api-key
-supabase secrets set RAZORPAY_KEY_SECRET=your-razorpay-secret
-supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-```
+1. **Create a new Supabase project**
+2. **Run the database migrations**:
+   ```sql
+   -- Run the complete schema from database-schema.sql
+   ```
+3. **Deploy Edge Functions**:
+   ```bash
+   supabase functions deploy gemini-proxy
+   supabase functions deploy razorpay-verify
+   ```
+4. **Set up RLS policies** (included in schema)
 
-### Step 4: Environment Variables
+### Google Gemini Setup
 
-Create a `.env` file in the project root (use `.env.example` as template):
-
-```env
-# Supabase Configuration
-EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
-
-# Gemini AI Configuration
-EXPO_PUBLIC_GEMINI_API_KEY=your-gemini-api-key-here
-
-# Edge Function URLs
-EXPO_PUBLIC_GEMINI_PROXY_URL=https://your-project.supabase.co/functions/v1/gemini-proxy
-EXPO_PUBLIC_RAZORPAY_VERIFY_URL=https://your-project.supabase.co/functions/v1/razorpay-verify
-
-# Razorpay Configuration
-EXPO_PUBLIC_RAZORPAY_KEY_ID=your-razorpay-key-id
-
-# App Configuration
-EXPO_PUBLIC_APP_NAME=Velora
-```
-
-**Important Security Notes**:
-- NEVER commit your `.env` file to version control
-- Service role keys must ONLY be stored in Edge Function secrets
-- Razorpay secret must ONLY be stored in Edge Function secrets
-- Client code should only use public/anon keys
-
-### Step 5: Get API Keys
-
-#### Google Gemini API Key
-1. Go to [Google AI Studio](https://makersuite.google.com/)
+1. Go to [Google AI Studio](https://aistudio.google.com/)
 2. Create a new API key
-3. Add it to your `.env` file and Edge Function secrets
+3. Add the key to your environment variables
 
-#### Razorpay Keys
-1. Sign up at [Razorpay](https://razorpay.com/)
-2. Get your Key ID and Key Secret from Dashboard
-3. Use **Test keys** for development
-4. Add Key ID to `.env` and Key Secret to Edge Function secrets
+### Razorpay Setup
 
-### Step 6: Run the App
+1. Create a Razorpay account
+2. Get your API keys from the dashboard
+3. Add the keys to your environment variables
+4. Configure webhook URL: `https://your-project.supabase.co/functions/v1/razorpay-verify`
 
-**Development**:
+## 📱 Building for Production
+
+### Android
 ```bash
-npm run dev
+eas build --platform android
 ```
 
-**Type checking**:
+### iOS
 ```bash
-npm run typecheck
+eas build --platform ios
 ```
 
-**Web build**:
+### Web
 ```bash
 npm run build:web
 ```
 
-### Step 7: Testing Payments (Development)
+## 🧪 Testing
 
-For testing Razorpay payments in development:
-
-1. Use Razorpay test keys
-2. Test card numbers:
-   - Card: 4111 1111 1111 1111
-   - CVV: Any 3 digits
-   - Expiry: Any future date
-3. Use test mode in Razorpay dashboard
-4. Payments will not actually charge real money
-
-### Step 8: Mobile Development
-
-For iOS/Android development:
-
-1. Install Expo Go app on your device
-2. Run `npm run dev`
-3. Scan QR code with Expo Go
-4. For production builds, use EAS Build:
+Run the test suite:
 ```bash
-npm install -g eas-cli
-eas build
+npm test
 ```
 
-## Subscription Tiers
-
-| Tier | Price | Coins/Month | Features |
-|------|-------|-------------|----------|
-| Free | $0 | 10 | Basic recipe search, Limited AI chat |
-| Plus | $4.99 | 50 | Advanced search, AI recipe generation, Save favorites |
-| Pro | $9.99 | 150 | Unlimited search, Priority AI, Meal planning |
-| Ultra | $19.99 | 500 | All Pro features, Custom AI, Nutrition tracking |
-
-## Coin Usage
-
-- **AI Chat Message**: 1 coin per message
-- **Recipe Generation**: 3 coins per recipe
-- **Monthly Reset**: Coins refresh based on subscription tier
-
-## Security Features
-
-- Row Level Security (RLS) on all database tables
-- Secure email/password authentication with Supabase
-- Password validation (minimum 6 characters)
-- Automatic session refresh
-- Protected API routes
-- No sensitive data in client code
-
-## Key User Flows
-
-### Authentication
-1. New users click "Sign Up" and enter name, email, and password
-2. Existing users sign in with email and password
-3. Profile automatically created with 10 free coins on sign up
-4. Secure session established with automatic refresh
-
-### Recipe Generation
-1. User enters ingredients or preferences
-2. Confirms 3-coin cost
-3. AI generates custom recipe with instructions
-4. Recipe saved to user's collection
-
-### AI Chat
-1. User asks cooking question
-2. Confirms 1-coin cost
-3. AI provides contextual cooking advice
-4. Conversation history maintained
-
-## Performance Optimizations
-
-- Efficient state management with Context API
-- Optimized re-renders with React.memo
-- Lazy loading for large datasets
-- Image optimization with proper sizing
-- Cached API responses
-
-## Future Enhancements
-
-- Offline recipe access
-- Meal planning calendar
-- Grocery list generation
-- Social sharing features
-- Recipe ratings and reviews
-- Video cooking instructions
-- Nutrition tracking dashboard
-- Push notifications for reminders
-
-## Testing
-
-Run type checking:
+Run tests in watch mode:
 ```bash
-npm run typecheck
+npm run test:watch
 ```
 
-## Troubleshooting
+## 📁 Project Structure
 
-### Database Not Available
-If you see database errors, you need to set up the Supabase schema first. The database migration includes all necessary tables, RLS policies, and triggers.
-
-### AI API Errors
-Ensure your Gemini API key is valid and has sufficient quota. The app uses the `gemini-2.0-flash-exp` model.
-
-### Build Errors
-If you encounter build errors, try:
-```bash
-rm -rf node_modules
-npm install
+```
+velora/
+├── app/                    # Expo Router pages
+│   ├── (tabs)/            # Tab navigation screens
+│   ├── auth/              # Authentication screens
+│   └── _layout.tsx        # Root layout
+├── components/            # Reusable UI components
+├── contexts/              # React Context providers
+├── hooks/                 # Custom React hooks
+├── lib/                   # Utility libraries
+├── services/              # API and business logic
+├── types/                 # TypeScript type definitions
+├── supabase/              # Supabase configuration
+│   └── functions/         # Edge Functions
+└── database-schema.sql    # Database schema
 ```
 
-## License
+## 🔐 Security
 
-Proprietary - All rights reserved
+- All API keys are stored server-side in Edge Functions
+- Row Level Security (RLS) policies protect user data
+- JWT tokens are used for authentication
+- Payment verification is done server-side
+- Input validation and sanitization throughout
 
-## Support
+## 🚀 Deployment
 
-For issues or questions, contact the development team.
+### Supabase Edge Functions
+```bash
+supabase functions deploy
+```
+
+### Expo Application Services (EAS)
+```bash
+eas build --platform all
+eas submit --platform all
+```
+
+## 📊 Analytics
+
+The app includes basic analytics tracking:
+- User actions and events
+- AI usage patterns
+- Subscription metrics
+- Error tracking
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+For support, email support@velora.app or create an issue in the repository.
+
+## 🔄 Changelog
+
+### v1.0.0
+- Initial release
+- AI chat assistant with Gemini integration
+- Recipe generation and discovery
+- VeloraCoins subscription system
+- Razorpay payment integration
+- Offline recipe caching
+- Dark/light theme support
+
+## 🎯 Roadmap
+
+- [ ] Push notifications for recipe reminders
+- [ ] Meal planning features
+- [ ] Nutrition tracking
+- [ ] Social features (sharing recipes)
+- [ ] Voice commands
+- [ ] Recipe video integration
+- [ ] Advanced AI features (image recognition, etc.)
 
 ---
 
-Built with ❤️ using React Native, Expo, and Supabase
+Made with ❤️ by the Velora team

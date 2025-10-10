@@ -41,12 +41,26 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleUpgrade = (tier: string) => {
-    Alert.alert(
-      'Upgrade Subscription',
-      'Payment integration with Razorpay is available. This demo shows the subscription flow.',
-      [{ text: 'OK' }]
-    );
+  const handleUpgrade = async (tier: string) => {
+    try {
+      const plan = SUBSCRIPTION_PLANS.find(p => p.tier === tier);
+      if (!plan || !plan.price) return;
+      // Razorpay expects amount in paise
+      const amountInPaise = plan.price * 100;
+      const order = await paymentService.createOrder(amountInPaise, { tier });
+      // Navigate to a simple web checkout page or invoke native SDK (webview approach here)
+      router.push({
+        pathname: '/payment',
+        params: {
+          order_id: order.order.id,
+          key_id: order.key_id,
+          amount: String(amountInPaise),
+          tier,
+        },
+      } as any);
+    } catch (e: any) {
+      Alert.alert('Payment Error', e?.message || 'Failed to start payment');
+    }
   };
 
   return (

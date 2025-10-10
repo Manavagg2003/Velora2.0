@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Send, Sparkles } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useProfile } from '@/contexts/ProfileContext';
+import { useCoins } from '@/contexts/CoinContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { aiService } from '@/services/ai.service';
 import { chatService } from '@/services/chat.service';
@@ -14,7 +14,7 @@ const MESSAGE_COST = 1;
 export default function ChatScreen() {
   const { theme } = useTheme();
   const { user } = useAuth();
-  const { profile, spendCoins, refreshProfile } = useProfile();
+  const { balance, spendCoins, refreshBalance } = useCoins();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,7 +42,7 @@ export default function ChatScreen() {
   const sendMessage = async () => {
     if (!input.trim() || loading || !user || !conversationId) return;
 
-    if (!profile || profile.coin_balance < MESSAGE_COST) {
+    if (!balance || balance < MESSAGE_COST) {
       Alert.alert(
         'Insufficient Coins',
         `You need ${MESSAGE_COST} coin to send a message. Please upgrade your subscription to continue.`,
@@ -62,9 +62,9 @@ export default function ChatScreen() {
     setLoading(true);
 
     try {
-      const canSpend = await spendCoins(MESSAGE_COST, 'AI Chat Message', conversationId);
+      const { success } = await spendCoins(MESSAGE_COST, 'AI Chat Message', 'chat');
 
-      if (!canSpend) {
+      if (!success) {
         Alert.alert('Error', 'Failed to process coins. Please try again.');
         setMessages(prev => prev.slice(0, -1));
         setLoading(false);
@@ -94,7 +94,7 @@ export default function ChatScreen() {
         await chatService.updateConversationTitle(conversationId, title);
       }
 
-      await refreshProfile();
+      await refreshBalance();
     } catch (error) {
       console.error('Chat error:', error);
       Alert.alert('Error', 'Failed to get AI response. Your coins have been refunded.');

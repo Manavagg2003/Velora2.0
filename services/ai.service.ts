@@ -1,170 +1,176 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { RecipeData } from '@/types/database';
+import { supabase, EDGE_FUNCTIONS } from '@/lib/supabase';
+import { ChatMessage, RecipeData } from '@/types/database';
 
-const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-
-export class AIService {
-  private model;
-
-  constructor() {
-    this.model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-  }
-
-  async chatWithAI(message: string, conversationHistory: Array<{ role: string; content: string }> = []): Promise<string> {
-    try {
-      const context = `You are Velora, an expert AI cooking assistant. You help users with cooking questions,
-      recipe advice, ingredient substitutions, cooking techniques, and culinary tips. Be friendly, helpful,
-      and provide practical advice. Keep responses concise but informative.`;
-
-      const formattedHistory = conversationHistory.map(msg =>
-        `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
-      ).join('\n');
-
-      const prompt = `${context}\n\nConversation history:\n${formattedHistory}\n\nUser: ${message}\n\nAssistant:`;
-
-      const result = await this.model.generateContent(prompt);
-      const response = result.response;
-      return response.text();
-    } catch (error) {
-      console.error('AI chat error:', error);
-      throw new Error('Failed to get AI response. Please try again.');
-    }
-  }
-
-  async generateRecipe(params: {
-    ingredients?: string[];
-    cuisine?: string;
+export interface ChatRequest {
+  message: string;
+  conversationId?: string;
+  context?: {
     dietaryRestrictions?: string[];
+    allergies?: string[];
     skillLevel?: string;
-    cookingTime?: number;
-    servings?: number;
-  }): Promise<RecipeData> {
-    try {
-      const prompt = this.buildRecipePrompt(params);
-
-      const result = await this.model.generateContent(prompt);
-      const response = result.response.text();
-
-      return this.parseRecipeResponse(response);
-    } catch (error) {
-      console.error('Recipe generation error:', error);
-      throw new Error('Failed to generate recipe. Please try again.');
-    }
-  }
-
-  private buildRecipePrompt(params: any): string {
-    let prompt = `Generate a detailed recipe in JSON format with the following structure:
-{
-  "title": "Recipe Name",
-  "description": "Brief description",
-  "cuisine_type": "Cuisine",
-  "difficulty_level": "easy|medium|hard",
-  "cooking_time_minutes": number,
-  "servings": number,
-  "ingredients": [{"item": "ingredient name", "amount": "quantity"}],
-  "instructions": ["step 1", "step 2", ...],
-  "nutrition": {
-    "calories": number,
-    "protein": "Xg",
-    "carbs": "Xg",
-    "fat": "Xg"
-  },
-  "tags": ["tag1", "tag2"]
+    preferredCuisines?: string[];
+  };
+  type: 'chat' | 'recipe_generation';
+  ingredients?: string[];
+  constraints?: {
+    cuisine?: string;
+    diet?: string;
+    time?: number;
+    difficulty?: string;
+  };
 }
 
-Requirements:
-`;
+export interface ChatResponse {
+  text: string;
+  recipe?: RecipeData;
+  conversationId?: string;
+  tokens_used?: number;
+}
 
-    if (params.ingredients && params.ingredients.length > 0) {
-      prompt += `- Must use these ingredients: ${params.ingredients.join(', ')}\n`;
-    }
-    if (params.cuisine) {
-      prompt += `- Cuisine type: ${params.cuisine}\n`;
-    }
-    if (params.dietaryRestrictions && params.dietaryRestrictions.length > 0) {
-      prompt += `- Dietary restrictions: ${params.dietaryRestrictions.join(', ')}\n`;
-    }
-    if (params.skillLevel) {
-      prompt += `- Skill level: ${params.skillLevel}\n`;
-    }
-    if (params.cookingTime) {
-      prompt += `- Maximum cooking time: ${params.cookingTime} minutes\n`;
-    }
-    if (params.servings) {
-      prompt += `- Servings: ${params.servings}\n`;
-    }
+export interface RecipeGenerationRequest {
+  ingredients: string[];
+  constraints?: {
+    cuisine?: string;
+    diet?: string;
+    time?: number;
+    difficulty?: string;
+  };
+  context?: {
+    dietaryRestrictions?: string[];
+    allergies?: string[];
+    skillLevel?: string;
+    preferredCuisines?: string[];
+  };
+}
 
-    prompt += `\nProvide ONLY the JSON object, no additional text.`;
-
-    return prompt;
-  }
-
-  private parseRecipeResponse(response: string): RecipeData {
+class AIService {
+  private async makeRequest(endpoint: string, data: any): Promise<any> {
     try {
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in response');
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No active session');
       }
 
-      const parsed = JSON.parse(jsonMatch[0]);
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(data),
+      });
 
-      return {
-        title: parsed.title || 'Untitled Recipe',
-        description: parsed.description || '',
-        cuisine_type: parsed.cuisine_type || 'Other',
-        difficulty_level: parsed.difficulty_level || 'medium',
-        cooking_time_minutes: parsed.cooking_time_minutes || 30,
-        servings: parsed.servings || 4,
-        ingredients: parsed.ingredients || [],
-        instructions: parsed.instructions || [],
-        nutrition: parsed.nutrition,
-        tags: parsed.tags || [],
-        rating: 0,
-      };
-    } catch (error) {
-      console.error('Failed to parse recipe:', error);
-      throw new Error('Failed to parse recipe data');
-    }
-  }
-
-  async getRecipeSuggestions(query: string): Promise<string[]> {
-    try {
-      const prompt = `Given the search query: "${query}", suggest 5 relevant recipe ideas.
-      Return only a JSON array of recipe names, like: ["Recipe 1", "Recipe 2", ...]`;
-
-      const result = await this.model.generateContent(prompt);
-      const response = result.response.text();
-
-      const jsonMatch = response.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      return [];
+      return await response.json();
     } catch (error) {
-      console.error('Recipe suggestions error:', error);
-      return [];
+      console.error('AI Service error:', error);
+      throw error;
     }
   }
 
-  async analyzeIngredients(ingredients: string[]): Promise<{ compatible: boolean; suggestions: string[] }> {
+  async sendChatMessage(request: ChatRequest): Promise<ChatResponse> {
     try {
-      const prompt = `Analyze these ingredients for cooking compatibility: ${ingredients.join(', ')}
-      Return JSON: {"compatible": true/false, "suggestions": ["suggestion 1", ...]}`;
-
-      const result = await this.model.generateContent(prompt);
-      const response = result.response.text();
-
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-
-      return { compatible: true, suggestions: [] };
+      const response = await this.makeRequest(EDGE_FUNCTIONS.GEMINI_PROXY, request);
+      return response;
     } catch (error) {
-      console.error('Ingredient analysis error:', error);
-      return { compatible: true, suggestions: [] };
+      console.error('Chat message error:', error);
+      throw new Error('Failed to send chat message');
+    }
+  }
+
+  async generateRecipe(request: RecipeGenerationRequest): Promise<ChatResponse> {
+    try {
+      const response = await this.makeRequest(EDGE_FUNCTIONS.GEMINI_PROXY, {
+        message: `Generate a recipe using these ingredients: ${request.ingredients.join(', ')}`,
+        type: 'recipe_generation',
+        ingredients: request.ingredients,
+        constraints: request.constraints,
+        context: request.context,
+      });
+      return response;
+    } catch (error) {
+      console.error('Recipe generation error:', error);
+      throw new Error('Failed to generate recipe');
+    }
+  }
+
+  async getConversations(): Promise<any[]> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      const { data, error } = await supabase
+        .from('chat_conversations')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Get conversations error:', error);
+      throw new Error('Failed to fetch conversations');
+    }
+  }
+
+  async getConversationMessages(conversationId: string): Promise<ChatMessage[]> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      const { data, error } = await supabase
+        .from('chat_conversations')
+        .select('messages')
+        .eq('id', conversationId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      return data?.messages || [];
+    } catch (error) {
+      console.error('Get conversation messages error:', error);
+      throw new Error('Failed to fetch conversation messages');
+    }
+  }
+
+  async deleteConversation(conversationId: string): Promise<void> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      const { error } = await supabase
+        .from('chat_conversations')
+        .delete()
+        .eq('id', conversationId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Delete conversation error:', error);
+      throw new Error('Failed to delete conversation');
+    }
+  }
+
+  async updateConversationTitle(conversationId: string, title: string): Promise<void> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      const { error } = await supabase
+        .from('chat_conversations')
+        .update({ title })
+        .eq('id', conversationId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Update conversation title error:', error);
+      throw new Error('Failed to update conversation title');
     }
   }
 }

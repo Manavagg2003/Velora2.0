@@ -1,122 +1,202 @@
-import { supabase } from '@/lib/supabase';
-import { SubscriptionTier, SUBSCRIPTION_PLANS } from '@/types/database';
+import { supabase, EDGE_FUNCTIONS } from '@/lib/supabase';
+import { SUBSCRIPTION_PLANS } from '@/types/database';
 
-export class PaymentService {
-  async createSubscription(userId: string, tier: SubscriptionTier): Promise<{ success: boolean; error?: string }> {
+export interface PaymentRequest {
+  plan_tier: 'plus' | 'pro' | 'ultra';
+  amount: number;
+  currency: string;
+  receipt: string;
+  notes?: string;
+}
+
+export interface PaymentVerificationRequest {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+  plan_tier: 'plus' | 'pro' | 'ultra';
+  user_id: string;
+}
+
+export interface PaymentVerificationResponse {
+  success: boolean;
+  message: string;
+  coins_granted: number;
+  new_balance: number;
+  subscription_tier: string;
+  subscription_end_date: string;
+}
+
+class PaymentService {
+  private async makeRequest(endpoint: string, data: any): Promise<any> {
     try {
-      const plan = SUBSCRIPTION_PLANS.find(p => p.tier === tier);
-      if (!plan) {
-        return { success: false, error: 'Invalid subscription tier' };
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No active session');
       }
 
-      const startDate = new Date();
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + 1);
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(data),
+      });
 
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          subscription_tier: tier,
-          subscription_start_date: startDate.toISOString(),
-          subscription_end_date: endDate.toISOString(),
-          coin_balance: supabase.rpc('increment_coins', { user_id: userId, amount: plan.coins }),
-        })
-        .eq('id', userId);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
 
-      if (profileError) throw profileError;
-
-      const { error: transactionError } = await supabase
-        .from('coin_transactions')
-        .insert({
-          user_id: userId,
-          amount: plan.coins,
-          transaction_type: 'subscription',
-          description: `${plan.name} subscription - ${plan.coins} coins`,
-        });
-
-      if (transactionError) throw transactionError;
-
-      return { success: true };
+      return await response.json();
     } catch (error) {
-      console.error('Error creating subscription:', error);
-      return { success: false, error: 'Failed to create subscription' };
+      console.error('Payment Service error:', error);
+      throw error;
     }
   }
 
-  async cancelSubscription(userId: string): Promise<boolean> {
+  async verifyPayment(request: PaymentVerificationRequest): Promise<PaymentVerificationResponse> {
     try {
+      const response = await this.makeRequest(EDGE_FUNCTIONS.RAZORPAY_VERIFY, request);
+      return response;
+    } catch (error) {
+      console.error('Payment verification error:', error);
+      throw new Error('Failed to verify payment');
+    }
+  }
+
+  async createOrder(amountInPaise: number, notes?: Record<string,string>) {
+    try {
+      const payload = { amount: amountInPaise, currency: 'INR', notes };
+      const res = await this.makeRequest(EDGE_FUNCTIONS.RAZORPAY_CREATE_ORDER, payload);
+      return res as { order: any; key_id: string };
+    } catch (e) {
+      console.error('Create order error:', e);
+      throw e;
+    }
+  }
+
+  async getSubscriptionPlans() {
+    return SUBSCRIPTION_PLANS;
+  }
+
+  async getCurrentSubscription() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    } catch (error) {
+      console.error('Get current subscription error:', error);
+      return null;
+    }
+  }
+
+  async getSubscriptionHistory() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Get subscription history error:', error);
+      throw new Error('Failed to fetch subscription history');
+    }
+  }
+
+  async cancelSubscription(subscriptionId: string) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
       const { error } = await supabase
-        .from('profiles')
-        .update({
-          subscription_tier: 'free',
-          razorpay_subscription_id: null,
+        .from('subscriptions')
+        .update({ 
+          status: 'cancelled',
+          updated_at: new Date().toISOString()
         })
-        .eq('id', userId);
+        .eq('id', subscriptionId)
+        .eq('user_id', user.id);
 
       if (error) throw error;
       return true;
     } catch (error) {
-      console.error('Error canceling subscription:', error);
-      return false;
+      console.error('Cancel subscription error:', error);
+      throw new Error('Failed to cancel subscription');
     }
   }
 
-  async checkSubscriptionStatus(userId: string): Promise<{ active: boolean; tier: SubscriptionTier }> {
+  async getPaymentHistory() {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
       const { data, error } = await supabase
-        .from('profiles')
-        .select('subscription_tier, subscription_end_date')
-        .eq('id', userId)
-        .maybeSingle();
+        .from('coin_transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('transaction_type', 'subscription')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      if (!data) {
-        return { active: false, tier: 'free' };
-      }
-
-      const endDate = data.subscription_end_date ? new Date(data.subscription_end_date) : null;
-      const now = new Date();
-
-      if (endDate && endDate > now) {
-        return { active: true, tier: data.subscription_tier as SubscriptionTier };
-      }
-
-      return { active: false, tier: 'free' };
+      return data || [];
     } catch (error) {
-      console.error('Error checking subscription:', error);
-      return { active: false, tier: 'free' };
+      console.error('Get payment history error:', error);
+      throw new Error('Failed to fetch payment history');
     }
   }
 
-  async initializeRazorpay(amount: number, tier: SubscriptionTier): Promise<any> {
-    const plan = SUBSCRIPTION_PLANS.find(p => p.tier === tier);
-    if (!plan) {
-      throw new Error('Invalid subscription tier');
-    }
-
-    return {
-      key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID,
-      amount: amount * 100,
-      currency: 'USD',
-      name: 'Velora',
-      description: `${plan.name} Subscription`,
-      prefill: {
-        name: '',
-        email: '',
-      },
-      theme: {
-        color: '#FF6B35',
-      },
-    };
+  // Helper method to format currency
+  formatCurrency(amount: number, currency: string = 'INR'): string {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: currency,
+    }).format(amount);
   }
 
-  getPlanDetails(tier: SubscriptionTier) {
-    return SUBSCRIPTION_PLANS.find(p => p.tier === tier);
+  // Helper method to get plan details
+  getPlanDetails(tier: 'free' | 'plus' | 'pro' | 'ultra') {
+    return SUBSCRIPTION_PLANS.find(plan => plan.tier === tier);
   }
 
-  getAllPlans() {
-    return SUBSCRIPTION_PLANS;
+  // Helper method to check if subscription is active
+  isSubscriptionActive(subscription: any): boolean {
+    if (!subscription) return false;
+    
+    const now = new Date();
+    const endDate = new Date(subscription.end_date);
+    
+    return subscription.status === 'active' && endDate > now;
+  }
+
+  // Helper method to get days until subscription expires
+  getDaysUntilExpiry(subscription: any): number | null {
+    if (!subscription || !this.isSubscriptionActive(subscription)) return null;
+    
+    const now = new Date();
+    const endDate = new Date(subscription.end_date);
+    const diffTime = endDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return Math.max(0, diffDays);
   }
 }
 

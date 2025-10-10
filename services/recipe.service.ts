@@ -209,6 +209,65 @@ export class RecipeService {
       return false;
     }
   }
+async getRecipeById(recipeId: string): Promise<Recipe | null> {
+    try {
+      const { data, error } = await supabase
+        .from('recipes')
+        .select('*')
+        .eq('id', recipeId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error fetching recipe by id:', error);
+      return null;
+    }
+  }
+
+  async getFeaturedRecipes(limit: number = 5): Promise<Recipe[]> {
+    try {
+      const { data, error } = await supabase
+        .from('recipes')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching featured recipes:', error);
+      return [];
+    }
+  }
+
+  async getUserStats(userId: string): Promise<{ recipesSaved: number; timeCooked: number; skillsLearned: number }> {
+    try {
+      const { data: savedRecipes, error: savedError } = await supabase
+        .from('saved_recipes')
+        .select('id')
+        .eq('user_id', userId);
+
+      if (savedError) throw savedError;
+
+      // Mocked data for now
+      const timeCooked = 45;
+      const skillsLearned = 8;
+
+      return {
+        recipesSaved: savedRecipes?.length || 0,
+        timeCooked,
+        skillsLearned,
+      };
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+      return {
+        recipesSaved: 0,
+        timeCooked: 0,
+        skillsLearned: 0,
+      };
+    }
+  }
 }
 
 export const recipeService = new RecipeService();

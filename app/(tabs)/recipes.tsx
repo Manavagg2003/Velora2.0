@@ -1,99 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { Search, Plus, ListFilter as Filter, Sparkles } from 'lucide-react-native';
+import { Search, ListFilter as Filter } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useProfile } from '@/contexts/ProfileContext';
+import { useCoins } from '@/contexts/CoinContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
 import { RecipeCard } from '@/components/RecipeCard';
 import { CoinBalance } from '@/components/CoinBalance';
-import { aiService } from '@/services/ai.service';
+
 import { recipeService } from '@/services/recipe.service';
 import { RecipeCache } from '@/types/database';
 import { router } from 'expo-router';
 
-const RECIPE_GENERATION_COST = 3;
+
 
 export default function RecipesScreen() {
   const { theme } = useTheme();
   const { user } = useAuth();
-  const { profile, spendCoins, refreshProfile } = useProfile();
+  const { balance, spendCoins, refreshBalance } = useCoins();
   const [recipes, setRecipes] = useState<RecipeCache[]>([]);
   const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
 
-  useEffect(() => {
-    loadRecipes();
-  }, []);
-
-  const loadRecipes = async () => {
-    if (!user) return;
-
-    setLoading(true);
-    try {
-      const data = await recipeService.getRecipes(user.id);
-      setRecipes(data);
-    } catch (error) {
-      console.error('Error loading recipes:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateRecipe = async () => {
-    if (!user || !profile) return;
-
-    if (profile.coin_balance < RECIPE_GENERATION_COST) {
-      Alert.alert(
-        'Insufficient Coins',
-        `You need ${RECIPE_GENERATION_COST} coins to generate a recipe. Please upgrade your subscription.`,
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    setGenerating(true);
-
-    try {
-      const canSpend = await spendCoins(RECIPE_GENERATION_COST, 'AI Recipe Generation');
-
-      if (!canSpend) {
-        Alert.alert('Error', 'Failed to process coins. Please try again.');
-        setGenerating(false);
-        return;
-      }
-
-      const ingredients = searchQuery.split(',').map(i => i.trim()).filter(i => i);
-
-      const recipeData = await aiService.generateRecipe({
-        ingredients: ingredients.length > 0 ? ingredients : undefined,
-        servings: 4,
-      });
-
-      const recipeId = await recipeService.saveRecipe(
-        user.id,
-        recipeData,
-        searchQuery || 'AI Generated',
-        true
-      );
-
-      if (recipeId) {
-        Alert.alert('Success', 'Recipe generated successfully!');
-        await loadRecipes();
-        setSearchQuery('');
-      }
-
-      await refreshProfile();
-    } catch (error) {
-      console.error('Recipe generation error:', error);
-      Alert.alert('Error', 'Failed to generate recipe. Your coins have been refunded.');
-    } finally {
-      setGenerating(false);
-    }
-  };
 
   const searchRecipes = async () => {
     if (!user || !searchQuery.trim()) return;
@@ -123,7 +51,7 @@ export default function RecipesScreen() {
       <View style={styles.searchSection}>
         <View style={styles.searchBar}>
           <Input
-            placeholder="Search or enter ingredients..."
+            placeholder="Search your recipes..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             containerStyle={styles.searchInput}
@@ -137,10 +65,9 @@ export default function RecipesScreen() {
         </View>
 
         <Button
-          title={`Generate Recipe (${RECIPE_GENERATION_COST} coins)`}
-          onPress={generateRecipe}
-          loading={generating}
-          variant="secondary"
+          title="Generate a New Recipe"
+          onPress={() => router.push('/(tabs)/generate-recipe')}
+          icon={<Plus size={20} color="#FFFFFF" />}
           style={styles.generateButton}
         />
       </View>
@@ -149,20 +76,20 @@ export default function RecipesScreen() {
         style={styles.recipesContainer}
         contentContainerStyle={styles.recipesContent}
       >
-        {loading && !generating ? (
+        {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.primary} />
           </View>
         ) : recipes.length === 0 ? (
           <View style={styles.emptyContainer}>
             <View style={[styles.emptyIcon, { backgroundColor: theme.surface }]}>
-              <Sparkles size={48} color={theme.textSecondary} />
+              <Search size={48} color={theme.textSecondary} />
             </View>
             <Text style={[styles.emptyTitle, { color: theme.text }]}>
-              No Recipes Yet
+              No Recipes Found
             </Text>
             <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-              Generate your first AI-powered recipe or search for existing ones
+              You haven't saved any recipes yet. Try generating a new one!
             </Text>
           </View>
         ) : (
@@ -170,7 +97,7 @@ export default function RecipesScreen() {
             <RecipeCard
               key={recipe.id}
               recipe={recipe.recipe_data}
-              onPress={() => {}}
+              onPress={() => router.push(`/recipe/${recipe.id}`)}
             />
           ))
         )}

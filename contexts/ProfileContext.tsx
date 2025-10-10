@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
-import { Profile, CoinTransaction, UserPreferences } from '@/types/database';
+import { Profile, UserPreferences } from '@/types/database';
 
 interface ProfileContextType {
   profile: Profile | null;
@@ -10,9 +10,6 @@ interface ProfileContextType {
   refreshProfile: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
   updatePreferences: (updates: Partial<UserPreferences>) => Promise<void>;
-  spendCoins: (amount: number, description: string, relatedId?: string) => Promise<boolean>;
-  addCoins: (amount: number, description: string) => Promise<void>;
-  getTransactions: () => Promise<CoinTransaction[]>;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
@@ -108,92 +105,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const spendCoins = async (amount: number, description: string, relatedId?: string): Promise<boolean> => {
-    if (!user || !profile) return false;
-
-    if (profile.coin_balance < amount) {
-      return false;
-    }
-
-    try {
-      const newBalance = profile.coin_balance - amount;
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ coin_balance: newBalance })
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
-
-      const { error: transactionError } = await supabase
-        .from('coin_transactions')
-        .insert({
-          user_id: user.id,
-          amount: -amount,
-          transaction_type: 'spent',
-          description,
-          related_entity_id: relatedId,
-        });
-
-      if (transactionError) throw transactionError;
-
-      await refreshProfile();
-      return true;
-    } catch (error) {
-      console.error('Error spending coins:', error);
-      return false;
-    }
-  };
-
-  const addCoins = async (amount: number, description: string) => {
-    if (!user || !profile) return;
-
-    try {
-      const newBalance = profile.coin_balance + amount;
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ coin_balance: newBalance })
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
-
-      const { error: transactionError } = await supabase
-        .from('coin_transactions')
-        .insert({
-          user_id: user.id,
-          amount,
-          transaction_type: 'earned',
-          description,
-        });
-
-      if (transactionError) throw transactionError;
-
-      await refreshProfile();
-    } catch (error) {
-      console.error('Error adding coins:', error);
-      throw error;
-    }
-  };
-
-  const getTransactions = async (): Promise<CoinTransaction[]> => {
-    if (!user) return [];
-
-    try {
-      const { data, error } = await supabase
-        .from('coin_transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error loading transactions:', error);
-      return [];
-    }
-  };
+  
 
   return (
     <ProfileContext.Provider
@@ -204,9 +116,6 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         refreshProfile,
         updateProfile,
         updatePreferences,
-        spendCoins,
-        addCoins,
-        getTransactions,
       }}
     >
       {children}

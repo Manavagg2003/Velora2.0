@@ -3,53 +3,137 @@ import { useColorScheme } from 'react-native';
 import { ThemeMode } from '@/types/database';
 
 interface Theme {
+  // Primary colors - Bold pastels
   primary: string;
+  primaryLight: string;
+  primaryDark: string;
   secondary: string;
-  background: string;
-  surface: string;
-  card: string;
-  text: string;
-  textSecondary: string;
-  border: string;
-  error: string;
+  secondaryLight: string;
+  secondaryDark: string;
+  
+  // Accent colors - Bold pastels
+  accent: string;
+  accentLight: string;
+  accentDark: string;
   success: string;
   warning: string;
+  error: string;
   info: string;
-  accent: string;
+  
+  // Background colors
+  background: string;
+  backgroundSecondary: string;
+  surface: string;
+  surfaceSecondary: string;
+  card: string;
+  cardSecondary: string;
+  
+  // Text colors
+  text: string;
+  textSecondary: string;
+  textTertiary: string;
+  textInverse: string;
+  
+  // Border and divider colors
+  border: string;
+  borderLight: string;
+  borderDark: string;
+  divider: string;
+  
+  // Special colors
+  overlay: string;
+  shadow: string;
+  backdrop: string;
   isDark: boolean;
 }
 
 const lightTheme: Theme = {
-  primary: '#FF6B35',
-  secondary: '#F7931E',
-  background: '#FFFFFF',
-  surface: '#F8F9FA',
+  // Primary colors - Bold pastels
+  primary: '#FF6B9D', // Bold pink
+  primaryLight: '#FFB3D1',
+  primaryDark: '#E91E63',
+  secondary: '#4ECDC4', // Bold teal
+  secondaryLight: '#7DD3FC',
+  secondaryDark: '#0891B2',
+  
+  // Accent colors - Bold pastels
+  accent: '#A8E6CF', // Bold mint
+  accentLight: '#D1FAE5',
+  accentDark: '#059669',
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#3B82F6',
+  
+  // Background colors
+  background: '#FEFEFE',
+  backgroundSecondary: '#F8FAFC',
+  surface: '#FFFFFF',
+  surfaceSecondary: '#F1F5F9',
   card: '#FFFFFF',
-  text: '#1A1A1A',
-  textSecondary: '#6C757D',
-  border: '#DEE2E6',
-  error: '#DC3545',
-  success: '#28A745',
-  warning: '#FFC107',
-  info: '#17A2B8',
-  accent: '#6F42C1',
+  cardSecondary: '#F8FAFC',
+  
+  // Text colors
+  text: '#0F172A',
+  textSecondary: '#64748B',
+  textTertiary: '#94A3B8',
+  textInverse: '#FFFFFF',
+  
+  // Border and divider colors
+  border: '#E2E8F0',
+  borderLight: '#F1F5F9',
+  borderDark: '#CBD5E1',
+  divider: '#E2E8F0',
+  
+  // Special colors
+  overlay: 'rgba(0, 0, 0, 0.5)',
+  shadow: 'rgba(0, 0, 0, 0.1)',
+  backdrop: 'rgba(0, 0, 0, 0.3)',
   isDark: false,
 };
 
 const darkTheme: Theme = {
-  primary: '#FF6B35',
-  secondary: '#F7931E',
-  background: '#121212',
-  surface: '#1E1E1E',
-  card: '#2A2A2A',
-  text: '#FFFFFF',
-  textSecondary: '#B0B0B0',
-  border: '#3A3A3A',
-  error: '#FF6B6B',
-  success: '#51CF66',
-  warning: '#FFD43B',
-  info: '#4DABF7',
-  accent: '#9775FA',
+  // Primary colors - Bold pastels
+  primary: '#FF6B9D', // Bold pink
+  primaryLight: '#FFB3D1',
+  primaryDark: '#E91E63',
+  secondary: '#4ECDC4', // Bold teal
+  secondaryLight: '#7DD3FC',
+  secondaryDark: '#0891B2',
+  
+  // Accent colors - Bold pastels
+  accent: '#A8E6CF', // Bold mint
+  accentLight: '#D1FAE5',
+  accentDark: '#059669',
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#3B82F6',
+  
+  // Background colors
+  background: '#0F0F23',
+  backgroundSecondary: '#1A1A2E',
+  surface: '#16213E',
+  surfaceSecondary: '#0F3460',
+  card: '#1E293B',
+  cardSecondary: '#334155',
+  
+  // Text colors
+  text: '#F8FAFC',
+  textSecondary: '#CBD5E1',
+  textTertiary: '#94A3B8',
+  textInverse: '#0F172A',
+  
+  // Border and divider colors
+  border: '#334155',
+  borderLight: '#475569',
+  borderDark: '#1E293B',
+  divider: '#334155',
+  
+  // Special colors
+  overlay: 'rgba(0, 0, 0, 0.7)',
+  shadow: 'rgba(0, 0, 0, 0.3)',
+  backdrop: 'rgba(0, 0, 0, 0.5)',
   isDark: true,
 };
 
