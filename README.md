@@ -243,6 +243,12 @@ For support, email support@velora.app or create an issue in the repository.
 - [ ] Recipe video integration
 - [ ] Advanced AI features (image recognition, etc.)
 
+## To be Done:
+
+- **AI CHAT SCREEN**: Bugs in gemini api and chat submissions 
+- **Payment methods**: Bugs in payment methods in profile screen 
+-**EXTRA FEATURES**: My badges, monthly leaderboard, my badges, monthly leaderboard, settings are currently  mock texts - to be made functional
+
 ---
 
 Made with ❤️ by the Velora team
